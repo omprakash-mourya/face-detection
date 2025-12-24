@@ -1,0 +1,7 @@
+freeglut3-dev
+libgtk2.0-dev
+libavdevice-dev
+libavfilter-dev
+libopus-dev
+libvpx-dev
+pkg-config
