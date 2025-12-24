@@ -206,8 +206,8 @@ tab1, tab2 = st.tabs(["📸 Part 1: Collect References", "🔍 Part 2: Verify Fa
 
 VIDEO_CONSTRAINTS = {
     "video": {
-        "width": {"exact": 1280},
-        "height": {"exact": 720},
+        "width": {"min": 640, "ideal": 1280, "max": 1920},
+        "height": {"min": 480, "ideal": 720, "max": 1080},
     },
     "audio": False
 }
