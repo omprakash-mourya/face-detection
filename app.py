@@ -220,7 +220,16 @@ with tab1:
     with col_camera:
         st.subheader("📷 Live Camera Feed")
         
-        rtc_configuration = RTCConfiguration({"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
+        # WebRTC Configuration (STUN Servers for Cloud Deployment)
+        rtc_configuration = RTCConfiguration({
+            "iceServers": [
+                {"urls": ["stun:stun.l.google.com:19302"]},
+                {"urls": ["stun:stun1.l.google.com:19302"]},
+                {"urls": ["stun:stun2.l.google.com:19302"]},
+                {"urls": ["stun:stun3.l.google.com:19302"]},
+                {"urls": ["stun:stun4.l.google.com:19302"]},
+            ]
+        })
         
         ctx_ref = webrtc_streamer(
             key="ref-video",
