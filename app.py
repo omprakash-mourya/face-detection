@@ -151,49 +151,60 @@ class FaceDetectorVideoProcessor(VideoProcessorBase):
         self.out_image = None
 
     def recv(self, frame):
-        img = frame.to_ndarray(format="bgr24")
-        
-        with self.frame_lock:
-            self.out_image = img.copy()
+        try:
+            img = frame.to_ndarray(format="bgr24")
+            
+            with self.frame_lock:
+                self.out_image = img.copy()
 
-        height, width = img.shape[:2]
-        
-        cv2.putText(
-            img, 
-            f"Resolution: {width}x{height}", 
-            (20, 50), 
-            cv2.FONT_HERSHEY_SIMPLEX, 
-            1.0, 
-            (0, 0, 255),
-            2
-        )
+            height, width = img.shape[:2]
+            
+            # 1. Resolution Text (Top Left, Red)
+            cv2.putText(
+                img, 
+                f"Resolution: {width}x{height}", 
+                (20, 50), 
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                1.0, 
+                (0, 0, 255), # Red (BGR)
+                2
+            )
 
-        if width < 1200: 
-            status_text = "Stabilising resolution"
-            color = (0, 255, 255)
+            if width < 1200: 
+                # Stabilizing Status (Bottom, Yellow)
+                status_text = "Stabilising resolution"
+                color = (0, 255, 255) # Yellow (BGR)
+                
+                # Hide box, show status
+                text_size = cv2.getTextSize(status_text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
+                text_x = (width - text_size[0]) // 2
+                text_y = height - 50
+                
+                cv2.putText(img, status_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
+                
+            else:
+                # Stabilized Status (Bottom, Green)
+                status_text = "Resolution stabilised"
+                color = (0, 255, 0) # Green (BGR)
+                
+                text_size = cv2.getTextSize(status_text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
+                text_x = (width - text_size[0]) // 2
+                text_y = height - 50
+                
+                cv2.putText(img, status_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
+                
+                # Draw Box
+                x1, y1, x2, y2 = get_centered_crop_coords(height, width, CROP_BOX_SIZE)
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 3)
+                
+                # Region Info
+                cv2.putText(img, f"Region: {CROP_BOX_SIZE}x{CROP_BOX_SIZE}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
-            text_size = cv2.getTextSize(status_text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
-            text_x = (width - text_size[0]) // 2
-            text_y = height - 50
+            return av.VideoFrame.from_ndarray(img, format="bgr24")
             
-            cv2.putText(img, status_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
-            
-        else:
-            status_text = "Resolution stabilised"
-            color = (0, 255, 0)
-            
-            text_size = cv2.getTextSize(status_text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
-            text_x = (width - text_size[0]) // 2
-            text_y = height - 50
-            
-            cv2.putText(img, status_text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
-            
-            x1, y1, x2, y2 = get_centered_crop_coords(height, width, CROP_BOX_SIZE)
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 3)
-            
-            cv2.putText(img, f"Region: {CROP_BOX_SIZE}x{CROP_BOX_SIZE}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        
-        return av.VideoFrame.from_ndarray(img, format="bgr24")
+        except Exception as e:
+            print(f"Error in recv: {e}")
+            return frame
 
 st.markdown("""
 <div class="header">
@@ -204,14 +215,6 @@ st.markdown("""
 
 tab1, tab2 = st.tabs(["📸 Part 1: Collect References", "🔍 Part 2: Verify Face"])
 
-VIDEO_CONSTRAINTS = {
-    "video": {
-        "width": {"min": 640, "ideal": 1280, "max": 1920},
-        "height": {"min": 480, "ideal": 720, "max": 1080},
-    },
-    "audio": False
-}
-
 with tab1:
     st.markdown("## Collect Reference Images")
     
@@ -220,23 +223,14 @@ with tab1:
     with col_camera:
         st.subheader("📷 Live Camera Feed")
         
-        # WebRTC Configuration (STUN Servers for Cloud Deployment)
-        rtc_configuration = RTCConfiguration({
-            "iceServers": [
-                {"urls": ["stun:stun.l.google.com:19302"]},
-                {"urls": ["stun:stun1.l.google.com:19302"]},
-                {"urls": ["stun:stun2.l.google.com:19302"]},
-                {"urls": ["stun:stun3.l.google.com:19302"]},
-                {"urls": ["stun:stun4.l.google.com:19302"]},
-            ]
-        })
+        # SIMPLIFIED CONFIGURATION for Cloud Stability
+        # We rely on default STUN servers and browser defaults.
         
         ctx_ref = webrtc_streamer(
             key="ref-video",
             mode=WebRtcMode.SENDRECV,
-            rtc_configuration=rtc_configuration,
             video_processor_factory=FaceDetectorVideoProcessor,
-            media_stream_constraints=VIDEO_CONSTRAINTS,
+            media_stream_constraints={"video": True, "audio": False},
             async_processing=True
         )
         
@@ -312,9 +306,8 @@ with tab2:
             ctx_test = webrtc_streamer(
                 key="test-video",
                 mode=WebRtcMode.SENDRECV,
-                rtc_configuration=rtc_configuration,
                 video_processor_factory=FaceDetectorVideoProcessor,
-                media_stream_constraints=VIDEO_CONSTRAINTS,
+                media_stream_constraints={"video": True, "audio": False},
                 async_processing=True
             )
             
