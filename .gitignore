@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+
+# Project Specific
+reference_images/
+captured_image/
+application_data/
+
+# OS
+.DS_Store
+Thumbs.db
