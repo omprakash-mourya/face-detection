@@ -1,7 +1,8 @@
 streamlit
 streamlit-webrtc
 av
-tensorflow-cpu
+# Using TF 2.12 which is more stable on Streamlit Cloud Free Tier (Memory)
+tensorflow-cpu==2.12.0
 opencv-python-headless
-numpy
+numpy<1.25.0
 pillow
