@@ -17,7 +17,7 @@ Unlike traditional classification models that learn to classify "Person A" vs "P
 ### 1. Structure
 The "Siamese" architecture consists of two identical Convolutional Neural Networks (CNNs) that share the **exact same weights**.
 
-```mermaid
+```
 graph LR
     A[Input Image A] --> CNN[Shared CNN]
     B[Input Image B] --> CNN
